@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANIMATE EVERYTHING</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050505;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'Black Han Sans', sans-serif;
+  }
+
+  /* subtle grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #text-wrap {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+
+  .char {
+    display: inline-block;
+    font-size: clamp(3rem, 8vw, 9rem);
+    font-weight: 900;
+    color: #f0ece4;
+    letter-spacing: 0.04em;
+    will-change: transform, opacity;
+    position: relative;
+    /* subtle text shadow for depth */
+    text-shadow: 0 0 60px rgba(255,200,80,0.08);
+  }
+
+  .char.space {
+    width: 0.35em;
+  }
+
+  /* accent line under text */
+  #accent-line {
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #e8c060, #ff6b35, transparent);
+    transform-origin: left center;
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  /* replay button */
+  #replay {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: transparent;
+    border: 1px solid rgba(240,236,228,0.2);
+    color: rgba(240,236,228,0.4);
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+  #replay:hover {
+    border-color: rgba(240,236,228,0.6);
+    color: rgba(240,236,228,0.8);
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="text-wrap"></div>
+  <div id="accent-line"></div>
+</div>
+
+<button id="replay">↺ Replay</button>
+
+<script>
+  const phrase = "ANIMATE EVERYTHING";
+  const wrap = document.getElementById("text-wrap");
+
+  // build char spans
+  const chars = [];
+  for (let i = 0; i < phrase.length; i++) {
+    const span = document.createElement("span");
+    if (phrase[i] === " ") {
+      span.className = "char space";
+    } else {
+      span.className = "char";
+      span.textContent = phrase[i];
+      chars.push(span);
+    }
+    wrap.appendChild(span);
+  }
+
+  function runAnimation() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // set initial scattered state — vertical only (top or bottom)
+    gsap.set(chars, {
+      x: 0,
+      y: (i) => Math.random() > 0.5 ? gsap.utils.random(vh * 0.6, vh * 1.2) : gsap.utils.random(-vh * 1.2, -vh * 0.6),
+      rotation: () => gsap.utils.random(-25, 25),
+      opacity: 0,
+      scale: () => gsap.utils.random(0.6, 1.4),
+      force3D: true,
+    });
+
+    gsap.set("#accent-line", { scaleX: 0, opacity: 0 });
+
+    const tl = gsap.timeline();
+
+    tl.to(chars, {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      opacity: 1,
+      scale: 1,
+      duration: 1.1,
+      ease: "expo.out",
+      stagger: {
+        each: 0.045,
+        from: "random",
+      },
+      force3D: true,
+    });
+
+    tl.to("#accent-line", {
+      scaleX: 1,
+      opacity: 1,
+      duration: 0.7,
+      ease: "power3.out",
+    }, "-=0.3");
+  }
+
+  runAnimation();
+
+  document.getElementById("replay").addEventListener("click", runAnimation);
+</script>
+</body>
+</html>

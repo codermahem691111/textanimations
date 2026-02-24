@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hero Headline</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,700&family=Syne:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --text: #f0ede6;
+    --accent: #c8a96e;
+  }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    /* allow wave arcs to go outside without scrollbars */
+    overflow: hidden;
+  }
+
+  .hero {
+    text-align: left;
+    padding: 0 8vw;
+    max-width: 1100px;
+    width: 100%;
+    /* extra vertical room so wave arcs don't clip on body */
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  /* NO overflow:hidden — wave arcs must be fully visible */
+  .line-wrapper {
+    display: block;
+    /* generous spacing between lines so wave of one line
+       doesn't overlap the text of the next */
+    margin-bottom: 2.2rem;
+  }
+
+  .tagline {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(0.75rem, 1.1vw, 1rem);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2.6rem;
+    opacity: 0;
+  }
+
+  .h-line {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 7vw, 7.2rem);
+    font-weight: 900;
+    color: var(--text);
+    /* tall line-height gives room above each line for wave arcs */
+    line-height: 1.35;
+  }
+
+  .h-line.outline {
+    font-style: italic;
+    font-weight: 700;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--text);
+  }
+
+  .h-line .hi {
+    color: var(--accent);
+  }
+
+  /* Character wrapper — NO overflow:hidden so arcs show fully */
+  .char-wrap {
+    display: inline-block;
+    vertical-align: baseline;
+  }
+
+  .char {
+    display: inline-block;
+    opacity: 0;
+  }
+
+  .char-space {
+    display: inline-block;
+    width: 0.28em;
+  }
+
+  .deco-line {
+    width: 0;
+    height: 1px;
+    background: var(--accent);
+    margin-top: 3rem;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="line-wrapper">
+    <div class="tagline" id="tagline">— Crafting digital experiences since 2024</div>
+  </div>
+
+  <div class="line-wrapper">
+    <div class="h-line" id="h1">We build sharp,</div>
+  </div>
+
+  <div class="line-wrapper">
+    <div class="h-line outline" id="h2">standout brands</div>
+  </div>
+
+  <div class="line-wrapper">
+    <div class="h-line" id="h3">that <span class="hi">endure.</span></div>
+  </div>
+
+  <div class="deco-line" id="deco"></div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/*
+  Each character starts off-screen below (y: 180px),
+  shoots up past its resting position to a sine-wave PEAK
+  (visible above the baseline), then settles back to y:0.
+
+  The stagger means the crest physically travels left→right
+  through the letters like a rolling water wave.
+
+  char-wrap has NO overflow:hidden so the full arc is visible.
+*/
+
+function splitChars(el) {
+  const temp = document.createElement('div');
+  temp.innerHTML = el.innerHTML;
+  el.innerHTML = '';
+  const chars = [];
+
+  function walk(node, parent) {
+    if (node.nodeType === 3) {
+      [...node.textContent].forEach(ch => {
+        if (ch === ' ') {
+          const sp = document.createElement('span');
+          sp.className = 'char-space';
+          sp.innerHTML = '&nbsp;';
+          parent.appendChild(sp);
+        } else {
+          const wrap  = document.createElement('span');
+          const inner = document.createElement('span');
+          wrap.className  = 'char-wrap';
+          inner.className = 'char';
+          inner.textContent = ch;
+          wrap.appendChild(inner);
+          parent.appendChild(wrap);
+          chars.push(inner);
+        }
+      });
+    } else if (node.nodeType === 1) {
+      const clone = node.cloneNode(false);
+      node.childNodes.forEach(c => walk(c, clone));
+      parent.appendChild(clone);
+    }
+  }
+
+  temp.childNodes.forEach(n => walk(n, el));
+  return chars;
+}
+
+const c1 = splitChars(document.getElementById('h1'));
+const c2 = splitChars(document.getElementById('h2'));
+const c3 = splitChars(document.getElementById('h3'));
+
+function animateLine(chars, startTime, tl) {
+  const stagger   = 0.032;  // slight slow arrival per char
+  const riseDur   = 0.48;   // time to reach wave peak
+  const settleDur = 0.42;   // time to settle to rest
+  const waveAmp   = 90;     // px — tall, dramatic arc above baseline
+  const dropAmp   = 30;     // px — small dip below baseline for wave feel
+  const waveFreq  = 0.62;   // sine frequency across chars
+
+  chars.forEach((ch, i) => {
+    const t = startTime + i * stagger;
+
+    // Sine-based peak: alternates high arcs and shallow ones
+    // Math.sin gives values from -1 to 1;
+    // we use a full sine so some chars peak higher, some lower
+    const sineVal = Math.sin(i * waveFreq);
+    // Peak Y: mostly goes UP (negative), with subtle variation
+    const peakY = -(waveAmp + sineVal * dropAmp);
+
+    // Set starting position far below
+    gsap.set(ch, { y: 160, opacity: 0 });
+
+    tl
+      // Phase 1: rise from below → wave crest (visible arc above text)
+      .to(ch, {
+        y: peakY,
+        opacity: 1,
+        duration: riseDur,
+        ease: 'power3.out'
+      }, t)
+      // Phase 2: settle from crest → baseline
+      .to(ch, {
+        y: 0,
+        duration: settleDur,
+        ease: 'power2.inOut'
+      }, t + riseDur);
+  });
+
+  return startTime + (chars.length - 1) * stagger + riseDur + settleDur;
+}
+
+/* ── Master timeline ── */
+const tl = gsap.timeline();
+
+gsap.set('#tagline', { y: 14 });
+
+tl.to('#tagline', {
+  opacity: 1, y: 0,
+  duration: 0.85, ease: 'expo.out'
+}, 0.1);
+
+const end1 = animateLine(c1, 0.4,        tl);
+const end2 = animateLine(c2, end1 - 0.2, tl);
+const end3 = animateLine(c3, end2 - 0.2, tl);
+
+tl.to('#deco', {
+  width: '6rem', duration: 1.0, ease: 'power4.out'
+}, end3 - 0.15);
+</script>
+</body>
+</html>

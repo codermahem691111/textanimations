@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scramble Effect</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Bebas Neue', sans-serif;
+    overflow: hidden;
+  }
+
+  .scene {
+    position: relative;
+    text-align: center;
+  }
+
+  .label {
+    font-size: clamp(60px, 12vw, 140px);
+    letter-spacing: 0.12em;
+    user-select: none;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .label span {
+    display: inline-block;
+    position: relative;
+    color: transparent;
+  }
+
+  .hint {
+    margin-top: 24px;
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    color: #444;
+    text-transform: uppercase;
+    font-family: monospace;
+  }
+
+  .underline {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #e8c97a, transparent);
+    margin-top: 10px;
+    opacity: 0;
+    transform: scaleX(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <div class="label" id="text"></div>
+  <div class="underline" id="underline"></div>
+  <p class="hint">hover · click to scramble</p>
+</div>
+
+<script>
+  const ORIGINAL = "SCRAMBLE ME";
+  const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!?";
+  const container = document.getElementById("text");
+  const underline = document.getElementById("underline");
+
+  [...ORIGINAL].forEach(ch => {
+    const span = document.createElement("span");
+    span.dataset.original = ch;
+    if (ch === " ") {
+      span.textContent = " ";
+      span.style.display = "inline-block";
+      span.style.width = "0.35em";
+    } else {
+      span.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+      span.style.color = "transparent";
+    }
+    container.appendChild(span);
+  });
+
+  const spans = [...container.querySelectorAll("span")];
+  let scrambling = false;
+
+  function scramble(duration) {
+    if (scrambling) return;
+    scrambling = true;
+    duration = duration || 1.0;
+
+    const total = spans.length;
+    const fps = 30;
+
+    spans.forEach(function(span, i) {
+      const original = span.dataset.original;
+      if (original === " ") return;
+
+      const delay = (i / total) * duration * 0.5;
+      const resolveAt = delay + duration * 0.5;
+      let elapsed = 0;
+      let resolved = false;
+
+      const intervalId = setInterval(function() {
+        elapsed += 1 / fps;
+
+        if (elapsed < delay) {
+          span.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+          span.style.color = "transparent";
+          return;
+        }
+
+        if (elapsed >= resolveAt && !resolved) {
+          span.textContent = original;
+          span.style.color = "#f0ece0";
+          resolved = true;
+          clearInterval(intervalId);
+          if (i === total - 1) {
+            setTimeout(function() { scrambling = false; }, 200);
+          }
+          return;
+        }
+
+        const progress = (elapsed - delay) / (resolveAt - delay);
+        span.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+        const alpha = Math.min(progress * 2.5, 1);
+        const r = Math.round(232 + (240 - 232) * progress);
+        const g = Math.round(130 + (236 - 130) * progress);
+        const b = Math.round(20  + (224 - 20)  * progress);
+        span.style.color = "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+
+      }, 1000 / fps);
+    });
+
+    gsap.fromTo(underline,
+      { opacity: 0, scaleX: 0 },
+      { opacity: 1, scaleX: 1, duration: 0.4, ease: "power2.out",
+        onComplete: function() { gsap.to(underline, { opacity: 0, delay: 0.4, duration: 0.4 }); } }
+    );
+  }
+
+  setTimeout(function() { scramble(1.4); }, 400);
+  container.addEventListener("mouseenter", function() { scramble(0.8); });
+  container.addEventListener("click", function() { scramble(1.2); });
+</script>
+</body>
+</html>
